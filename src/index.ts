@@ -1,10 +1,10 @@
 import express from 'express';
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import passwordRoutes from './routes/password.routes';
 import emailRoutes from './routes/email.routes';
+import { initializeDatabase } from './utils/db.utils';
 
 // Carica le variabili d'ambiente
 dotenv.config();
@@ -31,27 +31,27 @@ app.use((req, res, next) => {
 });
 
 // Connessione al database MongoDB
-mongoose.connect(process.env.MONGODB_URI as string)
+initializeDatabase()
   .then(() => {
     console.log('Connessione al database MongoDB stabilita con successo');
+    
+    // Definizione delle rotte
+    app.use('/api/auth', authRoutes);
+    app.use('/api/users', userRoutes);
+    app.use('/api/password', passwordRoutes);
+    app.use('/api/email', emailRoutes);
+    
+    // Rotta di base per verificare che il server funzioni
+    app.get('/', (req, res) => {
+      res.send('API del servizio di autenticazione funzionante');
+    });
+    
+    // Avvio del server
+    app.listen(PORT, () => {
+      console.log(`Server in esecuzione sulla porta ${PORT}`);
+    });
   })
   .catch((error) => {
     console.error('Errore durante la connessione al database:', error);
     process.exit(1);
   });
-
-// Definizione delle rotte
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/password', passwordRoutes);
-app.use('/api/email', emailRoutes);
-
-// Rotta di base per verificare che il server funzioni
-app.get('/', (req, res) => {
-  res.send('API del servizio di autenticazione funzionante');
-});
-
-// Avvio del server
-app.listen(PORT, () => {
-  console.log(`Server in esecuzione sulla porta ${PORT}`);
-});

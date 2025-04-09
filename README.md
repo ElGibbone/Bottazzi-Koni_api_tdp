@@ -59,14 +59,14 @@ Tutte le comunicazioni sono protette e i dati sensibili vengono crittografati.
    JWT_EXPIRES_IN=1d
    
    # Configurazione Email
-   EMAIL_HOST=smtp.example.com
+   EMAIL_HOST=smtp.gmail.com(in questo caso si usa gmail ma si possono usare altris ervizzi)
    EMAIL_PORT=587
    EMAIL_SECURE=false
-   EMAIL_USER=your_email_user
-   EMAIL_PASS=your_email_password
+   EMAIL_USER=your_email_user (l'email dove hai attivato il servizio di gmail)
+   EMAIL_PASS=your_email_password (la password del fornita dal servizio di gmail)
    EMAIL_FROM=noreply@example.com
    RESET_PASSWORD_URL=http://localhost:3000/reset-password
-   VERIFY_EMAIL_URL=http://localhost:3000/verify-email
+   VERIFY_EMAIL_URL=http://localhost:3000/api/email/confirm
    ```
 
 ## Avvio del server

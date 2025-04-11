@@ -84,17 +84,17 @@ export const userServices = {
   getAllUsers: () => api.get('/users'),
 };
 
-// Servizi password
+// Servizi per la gestione della password
 export const passwordServices = {
   requestReset: (email: string) => api.post('/password/request-reset', { email }),
-  resetPassword: (token: string, newPassword: string) => 
-    api.post(`/password/reset/${token}`, { password: newPassword, confirmPassword: newPassword }),
+  verifyResetToken: (token: string) => api.get(`/password/verify-token/${token}`),
+  resetPassword: (token: string, data: object) => api.post(`/password/reset/${token}`, data),
   changePassword: (data: any) => api.post('/password/change', data),
 };
 
 // Servizi email
 export const emailServices = {
-  verifyEmail: (token: string) => api.get(`/email/verify/${token}`),
+  verifyEmail: (token: string) => api.get(`/email/confirm/${token}`),
   resendVerification: () => api.post('/email/resend-verification'),
 };
 

@@ -60,7 +60,8 @@ const userSchema = new Schema<IUser>({
   },
   resetPasswordToken: {
     type: String,
-    default: null
+    default: null,
+    index: true
   },
   resetPasswordExpires: {
     type: Date,
@@ -72,7 +73,8 @@ const userSchema = new Schema<IUser>({
   },
   verificationToken: {
     type: String,
-    default: null
+    default: null,
+    index: true
   },
   verificationTokenExpires: {
     type: Date,
@@ -97,6 +99,11 @@ userSchema.pre<IUser>('save', async function(next) {
 
 // Metodo per confrontare le password
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+  // Aggiungi un controllo di sicurezza
+  if (!this.password) {
+    console.error('Errore: La password di questo utente è undefined');
+    return false; // La password non può essere verificata, quindi fallisce
+  }
   return bcrypt.compare(candidatePassword, this.password);
 };
 

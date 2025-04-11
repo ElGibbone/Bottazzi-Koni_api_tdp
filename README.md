@@ -51,23 +51,7 @@ Tutte le comunicazioni sono protette e i dati sensibili vengono crittografati.
    ```
    npm install
    ```
-3. Configura le variabili d'ambiente nel file `.env`:
-   ```
-   PORT=3000
-   MONGODB_URI=mongodb://localhost:27017/auth-service
-   JWT_SECRET=your_jwt_secret_key
-   JWT_EXPIRES_IN=1d
-   
-   # Configurazione Email
-   EMAIL_HOST=smtp.gmail.com(in questo caso si usa gmail ma si possono usare altris ervizzi)
-   EMAIL_PORT=587
-   EMAIL_SECURE=false
-   EMAIL_USER=your_email_user (l'email dove hai attivato il servizio di gmail)
-   EMAIL_PASS=your_email_password (la password del fornita dal servizio di gmail)
-   EMAIL_FROM=noreply@example.com
-   RESET_PASSWORD_URL=http://localhost:3000/reset-password
-   VERIFY_EMAIL_URL=http://localhost:3000/api/email/confirm
-   ```
+3. Configura le variabili d'ambiente creando un file `.env` nella root del progetto (vedi sezione [Configurazione](#configurazione) sotto).
 
 ## Avvio del server
 
@@ -90,8 +74,7 @@ npm start
 ```
 POST /api/auth/register
 ```
-
-**Esempio completo:**
+Body:
 ```json
 {
   "username": "mario_rossi",
@@ -99,25 +82,21 @@ POST /api/auth/register
   "password": "S3cur3P@ssw0rd"
 }
 ```
-
-**Validazioni:**
-- Username: 3-20 caratteri (lettere, numeri, underscore)
-- Email: formato valido
-- Password: 8+ caratteri, 1 maiuscola, 1 numero, 1 speciale
-
-**Risposte:**
-- **201 Created**: Utente registrato con successo
+Risposte:
+- **201 Created**: Utente registrato con successo. Email di verifica inviata.
 ```json
 {
-  "message": "Registrazione completata",
-  "userId": "507f1f77bcf86cd799439011"
+  "message": "Utente registrato con successo. Controlla la tua email per verificare il tuo account.",
+  "token": "...", // Token JWT per l'utente
+  "user": { ... } // Dettagli utente (senza password/token)
 }
 ```
-- **400 Bad Request**: Dati non validi
+- **400 Bad Request**: Dati non validi (es. email già in uso, password non complessa).
 ```json
 {
-  "error": "Username già in uso",
-  "details": ["username"]
+  "message": "Registrazione fallita",
+  "error": "email_already_exists",
+  "details": "Email già in uso. Utilizza un altro indirizzo email."
 }
 ```
 
@@ -125,135 +104,124 @@ POST /api/auth/register
 ```
 POST /api/auth/login
 ```
-
-**Esempio completo:**
-```json
-{
-  "username": "mario_rossi",
-  "password": "S3cur3P@ssw0rd"
-}
-```
-
-**Protezioni:**
-- Rate limiting (5 tentativi/15 minuti)
-- Blocco temporaneo dopo troppi tentativi
-
-**Risposte:**
-- **200 OK**: Login effettuato con successo
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresIn": 86400,
-  "role": "user",
-  "emailVerified": true
-}
-```
-- **401 Unauthorized**: Credenziali non valide
-```json
-{
-  "error": "Credenziali non valide",
-  "remainingAttempts": 2
-}
-```
-
-#### Verifica Email
-```
-POST /api/email/verify
-```
 Body:
 ```json
 {
-  "email": "example@example.com"
+  "username": "mario.rossi@example.com", // Può essere username o email
+  "password": "S3cur3P@ssw0rd"
 }
 ```
 Risposte:
-- **200 OK**: Email di verifica inviata con successo
+- **200 OK**: Login effettuato con successo.
 ```json
 {
-  "message": "Email di verifica inviata con successo",
-  "email": "example@example.com"
+  "message": "Login effettuato con successo",
+  "token": "...",
+  "user": { ... } // Dettagli utente (senza password/token)
 }
 ```
-- **400 Bad Request**: Email non valida o già verificata
-```json
-{
-  "message": "Invio email fallito",
-  "error": "already_verified",
-  "details": "L'account è già verificato."
-}
-```
-- **404 Not Found**: Utente non trovato
-```json
-{
-  "message": "Invio email fallito",
-  "error": "user_not_found",
-  "details": "Utente non trovato."
-}
-```
+- **401 Unauthorized**: Credenziali non valide.
+- **403 Forbidden**: Account non verificato.
 
-#### Conferma Email
+### Verifica Email
+
+#### Richiesta Nuova Email di Verifica (Utente Autenticato)
+```
+POST /api/email/resend-verification
+```
+Header:
+```
+Authorization: Bearer <token>
+```
+Risposte:
+- **200 OK**: Email di verifica inviata con successo.
+- **400 Bad Request**: Account già verificato.
+- **401 Unauthorized**: Utente non autenticato.
+- **404 Not Found**: Utente non trovato.
+
+#### Conferma Email (Link dall'Email)
 ```
 GET /api/email/confirm/:token
 ```
 Risposte:
-- **200 OK**: Email verificata con successo
+- **200 OK**: Email verificata con successo.
 ```json
 {
   "message": "Email verificata con successo",
   "verified": true
 }
 ```
-- **400 Bad Request**: Token non valido o scaduto
-```json
-{
-  "message": "Verifica fallita",
-  "error": "invalid_or_expired_token",
-  "details": "Token di verifica non valido o scaduto."
-}
-```
+- **400 Bad Request**: Token non valido o scaduto.
 
-### Recupero Password
+### Gestione Password
 
-#### Richiesta di reset password
+#### Richiesta Reset Password (Utente non autenticato)
 ```
 POST /api/password/request-reset
 ```
 Body:
 ```json
 {
-  "email": "example@example.com"
+  "email": "mario.rossi@example.com"
 }
 ```
 Risposte:
-- **200 OK**: Email di reset inviata (se l'email esiste nel sistema).
-- **400 Bad Request**: Email non valida o mancante.
+- **200 OK**: Email di reset inviata (se l'email esiste).
+- **400 Bad Request**: Email mancante o formato non valido.
 
-#### Verifica token di reset
+#### Verifica Token di Reset (Usato dal Frontend)
 ```
 GET /api/password/verify-token/:token
 ```
 Risposte:
 - **200 OK**: Token valido.
+```json
+{
+  "message": "Token di reset valido",
+  "valid": true
+}
+```
 - **400 Bad Request**: Token non valido o scaduto.
 
-#### Reset della password
+#### Reset Password con Token (Usato dal Frontend)
 ```
 POST /api/password/reset/:token
 ```
 Body:
 ```json
 {
-  "password": "NewPassword123",
-  "confirmPassword": "NewPassword123"
+  "password": "NuovaP@ssw0rd1",
+  "confirmPassword": "NuovaP@ssw0rd1"
 }
 ```
 Risposte:
 - **200 OK**: Password reimpostata con successo.
-- **400 Bad Request**: Token non valido, password non corrispondenti o non conformi ai requisiti.
+- **400 Bad Request**: Token non valido, password non corrispondenti o non conformi.
 
-### Gestione dei Ruoli Utente
+#### Cambio Password (Utente Autenticato)
+```
+POST /api/password/change
+```
+Header:
+```
+Authorization: Bearer <token>
+```
+Body:
+```json
+{
+  "currentPassword": "S3cur3P@ssw0rd",
+  "newPassword": "NuovaP@ssw0rd1",
+  "confirmPassword": "NuovaP@ssw0rd1"
+}
+```
+Risposte:
+- **200 OK**: Password cambiata con successo.
+- **400 Bad Request**: Campi mancanti, nuove password non corrispondenti o non conformi.
+- **401 Unauthorized**: Password attuale errata.
 
-#### Profilo utente
+### Gestione Utente
+
+#### Ottenere Profilo Utente
 ```
 GET /api/users/profile
 ```
@@ -262,39 +230,108 @@ Header:
 Authorization: Bearer <token>
 ```
 Risposte:
-- **200 OK**: Profilo utente restituito con ruolo.
+- **200 OK**: Profilo utente restituito.
 ```json
 {
-  "username": "example",
-  "email": "example@example.com",
-  "role": "user"
+  "message": "Profilo utente recuperato con successo",
+  "user": { ... } // Dettagli utente (senza password/token)
 }
 ```
 - **401 Unauthorized**: Token non valido o scaduto.
 
-#### Dashboard Moderatore
+#### Aggiornare Profilo Utente
 ```
-GET /api/users/moderator-dashboard
+PUT /api/users/profile
 ```
 Header:
 ```
 Authorization: Bearer <token>
 ```
+Body:
+```json
+{
+  "name": "Mario Rossi Aggiornato",
+  "email": "m.rossi.new@example.com"
+}
+```
 Risposte:
-- **200 OK**: Accesso consentito per moderatori e amministratori.
-- **403 Forbidden**: Permessi insufficienti.
+- **200 OK**: Profilo aggiornato con successo.
+```json
+{
+  "message": "Profilo aggiornato con successo",
+  "user": { ... } // Dettagli utente aggiornati
+}
+```
+- **400 Bad Request**: Formato email non valido.
+- **401 Unauthorized**: Token non valido o scaduto.
 
-#### Dashboard Amministratore
+#### Eliminare Account Utente
 ```
-GET /api/users/admin-dashboard
+DELETE /api/users/account
 ```
 Header:
 ```
 Authorization: Bearer <token>
 ```
 Risposte:
-- **200 OK**: Accesso consentito solo per amministratori.
-- **403 Forbidden**: Permessi insufficienti.
+- **200 OK**: Account eliminato con successo.
+```json
+{
+  "message": "Account eliminato con successo",
+  "success": true
+}
+```
+- **401 Unauthorized**: Token non valido o scaduto.
+- **404 Not Found**: Utente non trovato.
+
+### Amministrazione (Richiede Ruolo Admin)
+
+#### Ottenere Tutti gli Utenti
+```
+GET /api/auth/users
+```
+Header:
+```
+Authorization: Bearer <token>
+```
+Risposte:
+- **200 OK**: Lista di tutti gli utenti.
+```json
+{
+  "message": "Lista utenti recuperata con successo",
+  "users": [ { ... }, { ... } ] // Array di oggetti utente (senza password/token)
+}
+```
+- **401 Unauthorized**: Token non valido o scaduto.
+- **403 Forbidden**: Permessi insufficienti (non admin).
+
+#### Aggiornare Ruolo Utente
+```
+PUT /api/auth/users/role
+```
+Header:
+```
+Authorization: Bearer <token>
+```
+Body:
+```json
+{
+  "userId": "507f1f77bcf86cd799439011",
+  "role": "moderator"
+}
+```
+Risposte:
+- **200 OK**: Ruolo utente aggiornato.
+```json
+{
+  "message": "Ruolo utente aggiornato con successo",
+  "user": { ... } // Dettagli utente aggiornati
+}
+```
+- **400 Bad Request**: Ruolo non valido.
+- **401 Unauthorized**: Token non valido o scaduto.
+- **403 Forbidden**: Permessi insufficienti (non admin).
+- **404 Not Found**: Utente specificato non trovato.
 
 ## Gestione degli Errori
 
@@ -433,3 +470,97 @@ Utilizza strumenti come Postman per inviare richieste HTTP agli endpoint dell'AP
 - **Utente**: Accesso al profilo utente.
 - **Moderatore**: Accesso alla dashboard moderatore.
 - **Amministratore**: Accesso alla dashboard admin e gestione utenti.
+
+## Configurazione
+
+Crea un file `.env` nella root del progetto e configura le seguenti variabili d'ambiente:
+
+```dotenv
+# Configurazione Server
+PORT=3000                 # Porta su cui il server API ascolterà
+
+# Configurazione MongoDB
+MONGODB_URI=mongodb://localhost:27017/auth-service  # URI di connessione al database MongoDB
+
+# Configurazione JWT (JSON Web Token)
+JWT_SECRET=your_strong_jwt_secret_key  # Chiave segreta per firmare i token JWT (cambia questa!)
+JWT_EXPIRES_IN=1d                      # Durata di validità del token (es. 1d, 7d, 1h)
+
+# Configurazione Email (Nodemailer)
+EMAIL_HOST=smtp.example.com     # Host del server SMTP (es. smtp.gmail.com)
+EMAIL_PORT=587                  # Porta del server SMTP (es. 587 per TLS, 465 per SSL)
+EMAIL_SECURE=false              # true se usi la porta 465 (SSL), false per TLS (porta 587)
+EMAIL_USER=your_email@example.com # Il tuo indirizzo email
+EMAIL_PASS=your_email_password    # La password del tuo account email (vedi sotto per Gmail)
+EMAIL_FROM="Nome App" <your_email@example.com> # Mittente visualizzato nelle email
+
+# URL del Frontend (usati nelle email)
+VERIFY_EMAIL_URL=http://localhost:5173/verify-email # URL della pagina di verifica email nel frontend
+RESET_PASSWORD_URL=http://localhost:5173/reset-password # URL della pagina di reset password nel frontend
+```
+
+### Configurazione Email con Gmail
+
+Se desideri utilizzare un account Gmail per inviare le email:
+
+1.  **Abilita l'Accesso da App Meno Sicure (Sconsigliato) o usa una Password per le App (Consigliato):**
+    *   **Metodo Sconsigliato:** Se il tuo account Gmail *non* ha l'autenticazione a due fattori (2FA) attiva, potresti dover abilitare "Accesso app meno sicure" nelle impostazioni di sicurezza del tuo account Google. **Questo riduce la sicurezza del tuo account.**
+    *   **Metodo Consigliato (con 2FA):** Se hai l'autenticazione a due fattori (2FA) attiva sul tuo account Gmail (cosa altamente raccomandata), **devi** generare una "**Password per le app**".
+        1.  Vai alle [impostazioni di sicurezza del tuo Account Google](https://myaccount.google.com/security).
+        2.  Assicurati che l'autenticazione a due fattori sia **Attiva**.
+        3.  Nella sezione "Accesso a Google", cerca "Password per le app".
+        4.  Potrebbe essere necessario inserire nuovamente la password del tuo account.
+        5.  Nella sezione "Seleziona app", scegli "Altra (nome personalizzato)".
+        6.  Inserisci un nome (es. "API Autenticazione Nodejs") e clicca su "Genera".
+        7.  Verrà mostrata una password di 16 caratteri. **Copia questa password**. Questa è la password che userai per `EMAIL_PASS`.
+        8.  **Importante:** Salva questa password in modo sicuro, non potrai visualizzarla di nuovo.
+
+2.  **Configura le variabili `.env` per Gmail:**
+
+    ```dotenv
+    EMAIL_HOST=smtp.gmail.com
+    EMAIL_PORT=587
+    EMAIL_SECURE=false  # TLS è usato sulla porta 587
+    EMAIL_USER=tuoindirizzo@gmail.com
+    EMAIL_PASS=la_tua_password_per_le_app_di_16_caratteri # O la password normale se NON usi 2FA
+    EMAIL_FROM="La Tua App" <tuoindirizzo@gmail.com>
+    ```
+
+**Nota:** Assicurati che il file `.env` sia incluso nel tuo file `.gitignore` per evitare di committare credenziali sensibili nel repository Git.
+
+## Avvio
+
+1.  Installa le dipendenze:
+    ```bash
+    npm install
+    ```
+2.  Compila il codice TypeScript (se necessario, in base al tuo flusso di lavoro):
+    ```bash
+    npm run build
+    ```
+3.  Avvia il server API:
+    ```bash
+    npm start
+    ```
+    Oppure, per lo sviluppo con hot-reloading (se configurato con `nodemon` o simili):
+    ```bash
+    npm run dev
+    ```
+
+Il server API sarà disponibile all'indirizzo `http://localhost:PORT` (dove `PORT` è il valore specificato nel file `.env` o 3000 di default).
+
+## Endpoint API
+
+Consulta la documentazione Postman o il codice sorgente per i dettagli sugli endpoint disponibili.
+
+*(Sezione Endpoint API attuale...)*
+
+## Contribuzione
+
+Le pull request sono benvenute. Per modifiche importanti, si prega di aprire prima un issue per discutere ciò che si desidera cambiare.
+
+Assicurati di aggiornare i test, se applicabile.
+
+## Licenza
+
+[MIT](https://choosealicense.com/licenses/mit/)

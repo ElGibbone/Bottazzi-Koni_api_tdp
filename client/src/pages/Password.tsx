@@ -105,7 +105,11 @@ const Password: React.FC = () => {
       console.log('URL della richiesta:', `/password/reset/${resetToken}`);
       console.log('Dati inviati:', { password: newPassword, confirmPassword: newPassword });
       
-      const response = await passwordServices.resetPassword(resetToken, newPassword);
+      const response = await passwordServices.resetPassword(resetToken, {
+        password: newPassword,
+        confirmPassword: newPassword
+      });
+      
       console.log('Risposta reset password:', response.data);
       setResult(response.data);
       

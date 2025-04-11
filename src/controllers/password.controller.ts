@@ -46,15 +46,21 @@ export const requestPasswordReset = async (req: Request, res: Response): Promise
     // Genera un token casuale
     const resetToken = crypto.randomBytes(32).toString('hex');
 
-    // Salva il token e la data di scadenza nel database
-    user.resetPasswordToken = resetToken;
+    // Crea l'hash del token da salvare nel database
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    // Salva l'hash del token e la data di scadenza nel database
+    user.resetPasswordToken = hashedToken;
     user.resetPasswordExpires = new Date(Date.now() + 3600000); // Scade dopo 1 ora
     await user.save();
 
     // Ottieni l'URL base per il reset della password dalle variabili d'ambiente
     const resetUrl = process.env.RESET_PASSWORD_URL || 'http://localhost:3000/reset-password';
 
-    // Invia l'email di reset
+    // Invia l'email di reset con il token originale (non hashato)
     const emailSent = await sendPasswordResetEmail(user.email, resetToken, resetUrl);
 
     if (emailSent) {
@@ -100,9 +106,15 @@ export const verifyResetToken = async (req: Request, res: Response): Promise<voi
       return;
     }
 
-    // Trova l'utente con il token fornito e verifica che non sia scaduto
+    // Crea l'hash del token ricevuto
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    // Trova l'utente con l'hash del token fornito e verifica che non sia scaduto
     const user = await User.findOne({
-      resetPasswordToken: token,
+      resetPasswordToken: hashedToken,
       resetPasswordExpires: { $gt: new Date() }
     });
 
@@ -138,16 +150,8 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     const { token } = req.params;
     const { password, confirmPassword } = req.body;
 
-    console.log('Reset password richiesto con token:', token);
-    console.log('Payload ricevuto:', { password: '***', confirmPassword: '***' });
-
     // Verifica se tutti i campi necessari sono stati forniti
     if (!token || !password || !confirmPassword) {
-      console.log('Campi mancanti:', { 
-        hasToken: !!token, 
-        hasPassword: !!password, 
-        hasConfirmPassword: !!confirmPassword 
-      });
       res.status(400).json({
         message: 'Reset password fallito',
         error: 'missing_fields',
@@ -158,7 +162,6 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
 
     // Verifica che le password corrispondano
     if (password !== confirmPassword) {
-      console.log('Le password non corrispondono');
       res.status(400).json({
         message: 'Reset password fallito',
         error: 'passwords_do_not_match',
@@ -167,41 +170,19 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Validazione password
-    if (password.length < 6) {
-      console.log('Password troppo corta:', password.length);
-      res.status(400).json({
-        message: 'Reset password fallito',
-        error: 'password_too_short',
-        details: 'La password deve essere di almeno 6 caratteri.'
-      });
-      return;
-    }
+    // Crea l'hash del token ricevuto
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
 
-    // Validazione complessità password
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-
-    if (!(hasUpperCase && hasLowerCase && hasNumber)) {
-      console.log('Complessità password non sufficiente:', { hasUpperCase, hasLowerCase, hasNumber });
-      res.status(400).json({
-        message: 'Reset password fallito',
-        error: 'password_complexity',
-        details: 'La password deve contenere almeno una lettera maiuscola, una minuscola e un numero.'
-      });
-      return;
-    }
-
-    // Trova l'utente con il token fornito e verifica che non sia scaduto
-    console.log('Ricerca utente con token:', token);
+    // Trova l'utente con l'hash del token fornito e verifica che non sia scaduto
     const user = await User.findOne({
-      resetPasswordToken: token,
+      resetPasswordToken: hashedToken,
       resetPasswordExpires: { $gt: new Date() }
     });
 
     if (!user) {
-      console.log('Nessun utente trovato con il token o token scaduto');
       res.status(400).json({
         message: 'Reset password fallito',
         error: 'invalid_or_expired_token',
@@ -210,9 +191,8 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    console.log('Utente trovato, aggiornamento password per:', user.email);
-
     // Aggiorna la password e rimuovi il token di reset
+    // La validazione della password (lunghezza, complessità) verrà eseguita dal middleware pre-save del modello User
     user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
@@ -221,12 +201,22 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     res.status(200).json({
       message: 'Password reimpostata con successo. Ora puoi accedere con la tua nuova password.'
     });
-  } catch (error) {
-    console.error('Errore durante il reset della password:', error);
-    res.status(500).json({
-      message: 'Errore del server durante il reset della password',
-      error: 'server_error',
-      details: 'Si è verificato un errore interno. Riprova più tardi.'
-    });
+  } catch (error: any) {
+    // Gestione specifica per errori di validazione Mongoose
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map((e: any) => e.message);
+      res.status(400).json({
+        message: 'Reset password fallito',
+        error: 'validation_error',
+        details: validationErrors.join(', ')
+      });
+    } else {
+      console.error('Errore durante il reset della password:', error);
+      res.status(500).json({
+        message: 'Errore del server durante il reset della password',
+        error: 'server_error',
+        details: 'Si è verificato un errore interno. Riprova più tardi.'
+      });
+    }
   }
 };

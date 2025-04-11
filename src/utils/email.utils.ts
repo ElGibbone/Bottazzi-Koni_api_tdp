@@ -83,7 +83,7 @@ export const sendVerificationEmail = async (
     const transporter = createTransporter();
     
     // Costruisci l'URL completo per la verifica dell'email
-    const completeVerificationUrl = `${verificationUrl}/${verificationToken}`;
+    const completeVerificationUrl = `${verificationUrl}/confirm/${verificationToken}`;
     
     // Configura il messaggio email
     const mailOptions = {

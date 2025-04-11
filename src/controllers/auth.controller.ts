@@ -183,26 +183,26 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       jwtOptions
     );
 
+    // Crea un oggetto utente specifico per la risposta
+    const userResponse = {
+      id: newUser._id,
+      username: newUser.username,
+      email: newUser.email,
+      role: newUser.role,
+      verified: newUser.verified
+    };
+
     // Risposta con successo
-    res.status(201).json({
+    res.status(201).json(Object.assign({
       message: 'Utente registrato con successo. Controlla la tua email per verificare il tuo account.',
       token,
-      user: {
-        id: newUser._id,
-        username: newUser.username,
-        email: newUser.email,
-        role: newUser.role,
-        verified: newUser.verified
-      },
-      // Aggiungi il token di verifica alla risposta solo in ambiente di sviluppo
-      // In produzione questo non dovrebbe essere incluso!
-      ...(process.env.NODE_ENV !== 'production' && { 
-        verificationInfo: {
-          token: verificationToken,
-          verificationUrl: `${verificationUrl}?token=${verificationToken}`
-        }
-      })
-    });
+      user: userResponse // Usa l'oggetto utente creato appositamente
+    }, (process.env.NODE_ENV !== 'production' && {
+      verificationInfo: {
+        token: verificationToken,
+        verificationUrl: `${verificationUrl}?token=${verificationToken}`
+      }
+    })));
   } catch (error: any) {
     console.error('Errore durante la registrazione:', error);
     
@@ -270,9 +270,14 @@ export const updateUserRole = async (req: Request, res: Response): Promise<void>
       return;
     }
     
-    // Trova e aggiorna l'utente
-    const user = await User.findById(userId);
-    if (!user) {
+    // Trova e aggiorna l'utente in un'unica operazione, selezionando i campi per la risposta
+    const updatedUser = await User.findByIdAndUpdate(
+      userId, 
+      { role }, 
+      { new: true, runValidators: true } // new: restituisce il doc aggiornato, runValidators: esegue validatori schema
+    ).select('_id username email role'); // Seleziona solo i campi desiderati
+
+    if (!updatedUser) {
       res.status(404).json({
         message: 'Aggiornamento ruolo fallito',
         error: 'user_not_found',
@@ -281,18 +286,9 @@ export const updateUserRole = async (req: Request, res: Response): Promise<void>
       return;
     }
     
-    // Aggiorna il ruolo
-    user.role = role;
-    await user.save();
-    
     res.status(200).json({
       message: 'Ruolo utente aggiornato con successo',
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role
-      }
+      user: updatedUser // updatedUser contiene già solo i campi selezionati
     });
   } catch (error) {
     console.error('Errore durante l\'aggiornamento del ruolo:', error);
@@ -309,18 +305,20 @@ export const updateUserRole = async (req: Request, res: Response): Promise<void>
  */
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Trova tutti gli utenti, escludendo la password
-    const users = await User.find().select('-password');
+    // Trova tutti gli utenti, escludendo i campi sensibili e non necessari per la lista
+    const users = await User.find().select('-password -verificationToken -verificationTokenExpires -resetPasswordToken -resetPasswordExpires -__v');
     
     res.status(200).json({
       message: 'Lista utenti recuperata con successo',
-      users: users.map(user => ({
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        createdAt: user.createdAt
-      }))
+      users: users // Gli utenti contengono già solo i campi selezionati
+      // Non è più necessario mappare se .select() ha già escluso i campi
+      // users: users.map(user => ({
+      //   id: user._id,
+      //   username: user.username,
+      //   email: user.email,
+      //   role: user.role,
+      //   createdAt: user.createdAt
+      // }))
     });
   } catch (error) {
     console.error('Errore durante il recupero degli utenti:', error);
@@ -384,38 +382,45 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Trova l'utente nel database
-    const user = await User.findOne({ username });
+    // Trova l'utente tramite username o email, ma NON escludere il campo password per il controllo
+    const user = await User.findOne({
+      $or: [
+        { username: username }, // Cerca per username
+        { email: username }    // Cerca anche per email (assumendo che l'input possa essere l'email)
+      ]
+    });
+
     if (!user) {
-      res.status(401).json({ 
-        message: 'Login fallito', 
+      res.status(401).json({
+        message: 'Login fallito',
         error: 'invalid_credentials',
-        details: `Nessun utente trovato con il nome utente "${username}". Verifica di aver inserito il nome utente corretto.`
+        details: 'Nessun utente trovato con le credenziali fornite.'
       });
       return;
     }
 
+    // Aggiungi debug per verificare lo stato della password
+    console.log('Debug Login - User trovato:', {
+      userId: user._id,
+      username: user.username,
+      email: user.email,
+      hasPassword: !!user.password,
+      passwordLength: user.password ? user.password.length : 0,
+      verified: user.verified
+    });
+
     // Verifica la password
-    try {
-      const isPasswordValid = await user.comparePassword(password);
-      if (!isPasswordValid) {
-        res.status(401).json({ 
-          message: 'Login fallito', 
-          error: 'invalid_credentials',
-          details: 'Password non corretta. Verifica che la password inserita sia corretta. Ricorda che le password distinguono tra maiuscole e minuscole.'
-        });
-        return;
-      }
-    } catch (passwordError) {
-      console.error('Errore durante la verifica della password:', passwordError);
-      res.status(500).json({
+    const isMatch = await user.comparePassword(password);
+    console.log('Debug Login - Risultato comparePassword:', isMatch);
+    if (!isMatch) {
+      res.status(401).json({
         message: 'Login fallito',
-        error: 'password_verification_error',
-        details: 'Si è verificato un errore durante la verifica della password. Contatta l\'amministratore del sistema se il problema persiste.'
+        error: 'invalid_credentials',
+        details: 'Credenziali errate.'
       });
       return;
     }
-    
+
     // Verifica che l'account sia stato verificato
     if (!user.verified) {
       res.status(403).json({ 
@@ -426,34 +431,38 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Verifica il JWT_SECRET
+    // Genera il token JWT (se la password è corretta)
     if (typeof process.env.JWT_SECRET !== 'string') {
       console.warn('JWT_SECRET non definito correttamente. Usando un valore predefinito.');
       process.env.JWT_SECRET = 'default_jwt_secret_key';
     }
-    
-    // Opzioni JWT
+
     const jwtOptions: SignOptions = { 
       expiresIn: (process.env.JWT_EXPIRES_IN || '1d') as jwt.SignOptions['expiresIn']
     };
-    
-    // Genera il token JWT
+
+    // Firma il token
     const token = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET,
       jwtOptions
     );
 
-    // Risposta con successo
+    // Creiamo una versione dell'utente senza campi sensibili usando destrutturazione
+    const { 
+      password: _, // Escludi la password
+      verificationToken: __, 
+      verificationTokenExpires: ___, 
+      resetPasswordToken: ____, 
+      resetPasswordExpires: _____, 
+      __v: ______, 
+      ...userResponse 
+    } = user.toObject();
+
     res.status(200).json({
       message: 'Login effettuato con successo',
       token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role
-      }
+      user: userResponse
     });
   } catch (error: any) {
     console.error('Errore durante il login:', error);

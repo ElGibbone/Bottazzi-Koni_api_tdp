@@ -1,3 +1,13 @@
+# Per avviare l'api 
+
+per il primo avvio:
+   - npm install
+   - npm run dev
+
+per avviarlo ogni volta:
+   - npm start
+
+
 # Servizio di Autenticazione API
 
 Un servizio completo di autenticazione sviluppato in TypeScript con MongoDB che offre:

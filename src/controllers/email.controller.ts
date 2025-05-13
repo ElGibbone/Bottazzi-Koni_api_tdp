@@ -44,7 +44,7 @@ export const sendVerificationEmailController = async (req: Request, res: Respons
     await user.save();
 
     // Costruisci l'URL di verifica
-    const verificationUrl = process.env.VERIFY_EMAIL_URL || 'http://localhost:3000/verify-email';
+    const verificationUrl = process.env.VERIFY_EMAIL_URL || 'http://localhost:8080/verify-email';
 
     // Invia l'email di verifica
     const emailSent = await sendVerificationEmail(user.email, verificationToken, verificationUrl);
@@ -109,17 +109,171 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
     user.verificationTokenExpires = undefined;
     await user.save();
 
-    res.status(200).json({ 
-      message: 'Email verificata con successo',
-      verified: true
-    });
+    // URL di redirect dopo la verifica (frontend)
+    const redirectUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+    
+    // Invece di un reindirizzamento HTTP, invia una pagina HTML che esegue il redirect via JavaScript
+    res.setHeader('Content-Type', 'text/html');
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="it">
+      <head>
+        <title>Account Verificato con Successo</title>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+          }
+          .verification-card {
+            background-color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+          }
+          .success-icon {
+            width: 100px;
+            height: 100px;
+            background-color: #28a745;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px auto;
+            color: white;
+            font-size: 50px;
+          }
+          h1 {
+            color: #343a40;
+            margin-bottom: 20px;
+            font-weight: 600;
+          }
+          p {
+            color: #6c757d;
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+          }
+          .btn-success {
+            background-color: #28a745;
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: 500;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+          }
+          .btn-success:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+          }
+        </style>
+      </head>
+      <body>
+        <div class="verification-card">
+          <div class="success-icon">✓</div>
+          <h1>Email Verificata con Successo!</h1>
+          <p>Il tuo account è stato attivato correttamente. Ora puoi utilizzare tutte le funzionalità dell'applicazione.</p>
+        </div>
+      </body>
+      </html>
+    `);
   } catch (error) {
     console.error('Errore durante la verifica dell\'email:', error);
-    res.status(500).json({ 
-      message: 'Verifica fallita', 
-      error: 'server_error',
-      details: 'Si è verificato un errore durante la verifica dell\'email.'
-    });
+    
+    // URL di redirect in caso di errore
+    const redirectUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+    
+    // Invia una pagina HTML di errore con reindirizzamento via JavaScript
+    res.setHeader('Content-Type', 'text/html');
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="it">
+      <head>
+        <title>Errore di Verifica</title>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+          }
+          .verification-card {
+            background-color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+          }
+          .error-icon {
+            width: 100px;
+            height: 100px;
+            background-color: #dc3545;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px auto;
+            color: white;
+            font-size: 50px;
+          }
+          h1 {
+            color: #343a40;
+            margin-bottom: 20px;
+            font-weight: 600;
+          }
+          p {
+            color: #6c757d;
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+          }
+          .btn-primary {
+            background-color: #007bff;
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: 500;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+          }
+          .btn-primary:hover {
+            background-color: #0069d9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+          }
+        </style>
+      </head>
+      <body>
+        <div class="verification-card">
+          <div class="error-icon">✗</div>
+          <h1>Verifica Fallita</h1>
+          <p>Si è verificato un errore durante la verifica dell'email. Il link potrebbe essere scaduto o non valido.</p>
+        </div>
+      </body>
+      </html>
+    `);
   }
 };
 
@@ -164,7 +318,7 @@ export const resendVerificationEmail = async (req: Request, res: Response): Prom
     await user.save();
 
     // Costruisci l'URL di verifica
-    const verificationUrl = process.env.VERIFY_EMAIL_URL || 'http://localhost:3000/verify-email';
+    const verificationUrl = process.env.VERIFY_EMAIL_URL || 'http://localhost:8080/verify-email';
 
     // Invia l'email di verifica
     const emailSent = await sendVerificationEmail(user.email, verificationToken, verificationUrl);

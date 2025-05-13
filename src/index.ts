@@ -33,7 +33,7 @@ if (cluster.isPrimary) { // Verifica se è il processo master (Node >= v16)
 
   // Inizializza l'app Express
   const app = express();
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.PORT || 8080;
 
   // Middleware per il parsing del JSON
   app.use(express.json());
@@ -69,6 +69,15 @@ if (cluster.isPrimary) { // Verifica se è il processo master (Node >= v16)
       // Rotta di base per verificare che il server funzioni
       app.get('/', (req, res) => {
         res.send('API del servizio di autenticazione funzionante');
+      });
+      
+      // Gestione degli errori 404 per le API
+      app.all('/api/*', (req, res) => {
+        res.status(404).json({
+          message: 'Endpoint non trovato',
+          error: 'not_found',
+          details: `L'endpoint ${req.originalUrl} non esiste o il metodo ${req.method} non è supportato.`
+        });
       });
       
       // Avvio del server

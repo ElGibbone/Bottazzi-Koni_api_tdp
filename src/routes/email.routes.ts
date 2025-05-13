@@ -10,6 +10,9 @@ router.post('/verify', verifyEmail);
 // Rotta per confermare l'email tramite token (GET)
 router.get('/confirm/:token', verifyEmail);
 
+// Aggiunta rotta per gestire il caso di doppio "confirm" per i link già inviati
+router.get('/confirm/confirm/:token', verifyEmail);
+
 // Rotta per richiedere un nuovo invio dell'email di verifica
 router.post('/resend-verification', resendVerificationEmail);
 

@@ -487,7 +487,7 @@ Crea un file `.env` nella root del progetto e configura le seguenti variabili d'
 
 ```dotenv
 # Configurazione Server
-PORT=3000                 # Porta su cui il server API ascolterà
+PORT=8080                 # Porta su cui il server API ascolterà
 
 # Configurazione MongoDB
 MONGODB_URI=mongodb://localhost:27017/auth-service  # URI di connessione al database MongoDB
@@ -557,7 +557,7 @@ Se desideri utilizzare un account Gmail per inviare le email:
     npm run dev
     ```
 
-Il server API sarà disponibile all'indirizzo `http://localhost:PORT` (dove `PORT` è il valore specificato nel file `.env` o 3000 di default).
+Il server API sarà disponibile all'indirizzo `http://localhost:8080` (dove `PORT` è il valore specificato nel file `.env` o 8080 di default).
 
 ## Endpoint API
 

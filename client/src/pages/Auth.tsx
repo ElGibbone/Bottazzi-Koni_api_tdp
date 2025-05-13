@@ -1,8 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ApiResponse from '../components/ApiResponse';
 import { authServices, setToken, getToken, removeToken } from '../services/api';
+import { useLocation } from 'react-router-dom';
+
+// Funzione per ottenere i parametri URL
+function useQuery() {
+  return new URLSearchParams(useLocation().search);
+}
 
 const Auth: React.FC = () => {
+  // Ottieni i parametri URL
+  const query = useQuery();
+  const verified = query.get('verified');
+  const errorParam = query.get('error');
+
   // Stati per il form di registrazione
   const [registerData, setRegisterData] = useState({
     username: '',
@@ -27,6 +38,13 @@ const Auth: React.FC = () => {
 
   // Aggiungi questi stati e funzioni
   const [verifyToken, setVerifyToken] = useState('');
+  const [verificationMessage, setVerificationMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+
+  // Effetto per gestire i parametri URL quando il componente viene montato
+  useEffect(() => {
+    // Rimosso il codice per visualizzare il messaggio di verifica
+    // Non mostreremo più messaggi di verifica nella pagina di login
+  }, [verified, errorParam]);
 
   // Gestisce la modifica dei campi nel form di registrazione
   const handleRegisterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,6 +187,8 @@ const Auth: React.FC = () => {
             <h2>Autenticazione</h2>
           </div>
           <div className="card-body">
+            {/* Rimosso il messaggio di verifica dalla UI */}
+            
             {isLoggedIn ? (
               <div>
                 <div className="alert alert-success">

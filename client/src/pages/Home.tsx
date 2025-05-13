@@ -12,7 +12,7 @@ const Home: React.FC = () => {
     console.log("Tentativo di connessione all'API...");
     
     // Utilizzo direttamente l'URL dell'API senza webpack proxy
-    fetch('http://localhost:3000', {
+    fetch('http://localhost:8080', {
       method: 'GET',
       headers: {
         'Accept': '*/*',
@@ -29,7 +29,7 @@ const Home: React.FC = () => {
     })
     .catch(err => {
       console.error("Errore di connessione:", err);
-      setError(`Impossibile connettersi all'API: ${err.message}. Assicurati che il server sia in esecuzione sulla porta 3000.`);
+      setError(`Impossibile connettersi all'API: ${err.message}. Assicurati che il server sia in esecuzione sulla porta 8080.`);
       setIsLoading(false);
     });
   }, []);

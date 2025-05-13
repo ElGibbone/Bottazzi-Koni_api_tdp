@@ -64,7 +64,7 @@ const requestPasswordReset = (req, res) => __awaiter(void 0, void 0, void 0, fun
         user.resetPasswordExpires = new Date(Date.now() + 3600000); // Scade dopo 1 ora
         yield user.save();
         // Ottieni l'URL base per il reset della password dalle variabili d'ambiente
-        const resetUrl = process.env.RESET_PASSWORD_URL || 'http://localhost:3000/reset-password';
+        const resetUrl = process.env.RESET_PASSWORD_URL || 'http://localhost:8080/reset-password';
         // Invia l'email di reset con il token originale (non hashato)
         const emailSent = yield (0, email_utils_1.sendPasswordResetEmail)(user.email, resetToken, resetUrl);
         if (emailSent) {

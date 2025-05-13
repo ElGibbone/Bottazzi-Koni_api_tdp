@@ -150,7 +150,7 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             console.warn('VERIFY_EMAIL_URL non definito. Usando URL di default.');
         }
         // Costruisci l'URL di verifica
-        const verificationUrl = process.env.VERIFY_EMAIL_URL || 'http://localhost:3000/verify-email';
+        const verificationUrl = process.env.VERIFY_EMAIL_URL || 'http://localhost:8080/verify-email';
         // Invia l'email di verifica
         try {
             yield (0, email_utils_1.sendVerificationEmail)(newUser.email, verificationToken, verificationUrl);

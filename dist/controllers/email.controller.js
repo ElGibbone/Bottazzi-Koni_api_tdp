@@ -51,7 +51,7 @@ const sendVerificationEmailController = (req, res) => __awaiter(void 0, void 0, 
         user.verificationTokenExpires = verificationTokenExpires;
         yield user.save();
         // Costruisci l'URL di verifica
-        const verificationUrl = process.env.VERIFY_EMAIL_URL || 'http://localhost:3000/verify-email';
+        const verificationUrl = process.env.VERIFY_EMAIL_URL || 'http://localhost:8080/verify-email';
         // Invia l'email di verifica
         const emailSent = yield (0, email_utils_1.sendVerificationEmail)(user.email, verificationToken, verificationUrl);
         if (emailSent) {
@@ -112,7 +112,7 @@ const verifyEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         user.verificationTokenExpires = undefined;
         yield user.save();
         // URL di redirect dopo la verifica (frontend)
-        const redirectUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const redirectUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
         // Invece di un reindirizzamento HTTP, invia una pagina HTML che esegue il redirect via JavaScript
         res.setHeader('Content-Type', 'text/html');
         res.send(`
@@ -186,14 +186,8 @@ const verifyEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         <div class="verification-card">
           <div class="success-icon">✓</div>
           <h1>Email Verificata con Successo!</h1>
-          <p>Il tuo account è stato attivato correttamente. Stai per essere reindirizzato all'applicazione...</p>
+          <p>Il tuo account è stato attivato correttamente. Ora puoi utilizzare tutte le funzionalità dell'applicazione.</p>
         </div>
-        <script>
-          // Reindirizzamento automatico immediato
-          setTimeout(function() {
-            window.location.href = "${redirectUrl}/#/auth";
-          }, 1500);
-        </script>
       </body>
       </html>
     `);
@@ -201,7 +195,7 @@ const verifyEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     catch (error) {
         console.error('Errore durante la verifica dell\'email:', error);
         // URL di redirect in caso di errore
-        const redirectUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const redirectUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
         // Invia una pagina HTML di errore con reindirizzamento via JavaScript
         res.setHeader('Content-Type', 'text/html');
         res.send(`
@@ -275,14 +269,8 @@ const verifyEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         <div class="verification-card">
           <div class="error-icon">✗</div>
           <h1>Verifica Fallita</h1>
-          <p>Si è verificato un errore durante la verifica dell'email. Il link potrebbe essere scaduto o non valido. Stai per essere reindirizzato...</p>
+          <p>Si è verificato un errore durante la verifica dell'email. Il link potrebbe essere scaduto o non valido.</p>
         </div>
-        <script>
-          // Reindirizzamento automatico immediato
-          setTimeout(function() {
-            window.location.href = "${redirectUrl}/#/auth";
-          }, 1500);
-        </script>
       </body>
       </html>
     `);
@@ -324,7 +312,7 @@ const resendVerificationEmail = (req, res) => __awaiter(void 0, void 0, void 0, 
         user.verificationTokenExpires = verificationTokenExpires;
         yield user.save();
         // Costruisci l'URL di verifica
-        const verificationUrl = process.env.VERIFY_EMAIL_URL || 'http://localhost:3000/verify-email';
+        const verificationUrl = process.env.VERIFY_EMAIL_URL || 'http://localhost:8080/verify-email';
         // Invia l'email di verifica
         const emailSent = yield (0, email_utils_1.sendVerificationEmail)(user.email, verificationToken, verificationUrl);
         if (emailSent) {

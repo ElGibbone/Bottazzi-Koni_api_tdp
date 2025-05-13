@@ -32,7 +32,7 @@ else {
     console.log(`Worker ${process.pid} started`);
     // Inizializza l'app Express
     const app = (0, express_1.default)();
-    const PORT = process.env.PORT || 3000;
+    const PORT = process.env.PORT || 8080;
     // Middleware per il parsing del JSON
     app.use(express_1.default.json());
     // Middleware per la compressione Gzip

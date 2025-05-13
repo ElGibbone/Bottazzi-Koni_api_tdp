@@ -154,7 +154,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Costruisci l'URL di verifica
-    const verificationUrl = process.env.VERIFY_EMAIL_URL || 'http://localhost:3000/verify-email';
+    const verificationUrl = process.env.VERIFY_EMAIL_URL || 'http://localhost:8080/verify-email';
 
     // Invia l'email di verifica
     try {

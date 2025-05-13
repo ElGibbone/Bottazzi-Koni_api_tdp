@@ -58,7 +58,7 @@ export const requestPasswordReset = async (req: Request, res: Response): Promise
     await user.save();
 
     // Ottieni l'URL base per il reset della password dalle variabili d'ambiente
-    const resetUrl = process.env.RESET_PASSWORD_URL || 'http://localhost:3000/reset-password';
+    const resetUrl = process.env.RESET_PASSWORD_URL || 'http://localhost:8080/reset-password';
 
     // Invia l'email di reset con il token originale (non hashato)
     const emailSent = await sendPasswordResetEmail(user.email, resetToken, resetUrl);
